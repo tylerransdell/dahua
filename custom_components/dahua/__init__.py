@@ -127,6 +127,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
 
         self._supports_lighting_v2 = False
         self._illuminator_brightness_keys = []
+        self._supports_zoomprio = False
 
         # channel_number is not the channel_index. channel_number is the index + 1.
         # So channel index 0 is channel number 1. Except for some older firmwares where channel
@@ -349,13 +350,18 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                     middle_key = "table.Lighting_V2[{0}][0][0].MiddleLight[0].Light".format(channel)
                     if middle_key in lighting_v2_data:
                         self._illuminator_brightness_keys = ["MiddleLight"]
+                        self._supports_zoomprio = False
                     else:
                         for light_type in ["FarLight", "NearLight"]:
                             test_key = "table.Lighting_V2[{0}][0][0].{1}[0].Light".format(channel, light_type)
                             if test_key in lighting_v2_data:
                                 self._illuminator_brightness_keys.append(light_type)
+                        # Cameras with FarLight/NearLight (dual illuminator) support ZoomPrio mode
+                        if self._illuminator_brightness_keys:
+                            self._supports_zoomprio = True
                     if self._illuminator_brightness_keys:
-                        _LOGGER.debug("Illuminator uses %s for brightness", ",".join(self._illuminator_brightness_keys))
+                        _LOGGER.debug("Illuminator uses %s for brightness, zoomprio=%s",
+                                      ",".join(self._illuminator_brightness_keys), self._supports_zoomprio)
                     else:
                         _LOGGER.debug("Could not detect illuminator brightness light type")
                 except ClientError:
@@ -782,11 +788,16 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         bri = self.data.get("table.Lighting[{0}][0].MiddleLight[0].Light".format(self._channel))
         return dahua_utils.dahua_brightness_to_hass_brightness(bri)
 
+    def supports_zoomprio(self) -> bool:
+        """Returns true if this camera supports ZoomPrio mode for its illuminator"""
+        return self._supports_zoomprio
+
     def is_illuminator_on(self) -> bool:
         """Return true if the illuminator light is on"""
         # profile_mode 0=day, 1=night, 2=scene
-        profile_mode = self.get_profile_mode()       
-        return self.data.get("table.Lighting_V2[{0}][{1}][0].Mode".format(self._channel, profile_mode), "") == "Manual"
+        profile_mode = self.get_profile_mode()
+        mode = self.data.get("table.Lighting_V2[{0}][{1}][0].Mode".format(self._channel, profile_mode), "")
+        return mode == "Manual" or mode == "ZoomPrio"
 
     def is_flood_light_on(self) -> bool:
 

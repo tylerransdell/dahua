@@ -495,7 +495,7 @@ class DahuaClient:
         if "OK" not in value and "ok" not in value:
             raise Exception("Could not set text")
 
-    async def async_set_lighting_v2(self, channel: int, enabled: bool, brightness: int, profile_mode: str, light_types: list = None) -> dict:
+    async def async_set_lighting_v2(self, channel: int, enabled: bool, brightness: int, profile_mode: str, light_types: list = None, use_zoomprio: bool = False) -> dict:
         """
         async_set_lighting_v2 will turn on or off the white light on the camera. If turning on, the brightness will be used.
         brightness is in the range of 0 to 100 inclusive where 100 is the brightest.
@@ -503,7 +503,20 @@ class DahuaClient:
 
         profile_mode: 0=day, 1=night, 2=scene
         light_types: list of brightness field names (e.g. ['MiddleLight'], ['FarLight', 'NearLight'])
+        use_zoomprio: if True, use ZoomPrio mode (ON=ZoomPrio+Correction=50, OFF=Off)
         """
+
+        if use_zoomprio:
+            # ZoomPrio cameras: Mode=ZoomPrio turns on the light via zoom-priority algorithm
+            # Correction=50 is the recommended value for ZoomPrio
+            mode = "ZoomPrio"
+            if not enabled:
+                mode = "Off"
+            url = "/cgi-bin/configManager.cgi?action=setConfig&Lighting_V2[{channel}][{profile_mode}][0].Mode={mode}&Lighting_V2[{channel}][{profile_mode}][0].Correction=50".format(
+                channel=channel, profile_mode=profile_mode, mode=mode
+            )
+            _LOGGER.debug("Setting ZoomPrio light: %s", url)
+            return await self.get(url)
 
         if light_types is None:
             light_types = ["MiddleLight"]
@@ -514,6 +527,11 @@ class DahuaClient:
         url = "/cgi-bin/configManager.cgi?action=setConfig&Lighting_V2[{channel}][{profile_mode}][0].Mode={mode}".format(
             channel=channel, profile_mode=profile_mode, mode=mode
         )
+        # For MiddleLight and other non-ZoomPrio light types, always set brightness to 100 (full)
+        # when enabled, since the normalization in hass_brightness_to_dahua_brightness can produce
+        # unexpected values (e.g. 39%) from the HA brightness scale (0-255).
+        if enabled:
+            brightness = 100
         for lt in light_types:
             url += "&Lighting_V2[{channel}][{profile_mode}][0].{lt}[0].Light={brightness}".format(
                 channel=channel, profile_mode=profile_mode, lt=lt, brightness=brightness
