@@ -167,7 +167,8 @@ class DahuaIlluminator(DahuaBaseEntity, LightEntity):
         channel = self._coordinator.get_channel()
         profile_mode = self._coordinator.get_profile_mode()
         light_types = self._coordinator.get_illuminator_brightness_keys()
-        await self._coordinator.client.async_set_lighting_v2(channel, True, dahua_brightness, profile_mode, light_types)
+        use_zoomprio = self._coordinator.supports_zoomprio()
+        await self._coordinator.client.async_set_lighting_v2(channel, True, dahua_brightness, profile_mode, light_types, use_zoomprio)
         await self._coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs):
@@ -177,7 +178,8 @@ class DahuaIlluminator(DahuaBaseEntity, LightEntity):
         channel = self._coordinator.get_channel()
         profile_mode = self._coordinator.get_profile_mode()
         light_types = self._coordinator.get_illuminator_brightness_keys()
-        await self._coordinator.client.async_set_lighting_v2(channel, False, dahua_brightness, profile_mode, light_types)
+        use_zoomprio = self._coordinator.supports_zoomprio()
+        await self._coordinator.client.async_set_lighting_v2(channel, False, dahua_brightness, profile_mode, light_types, use_zoomprio)
         await self._coordinator.async_refresh()
 
 
