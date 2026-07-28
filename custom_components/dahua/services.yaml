@@ -43,11 +43,12 @@ set_video_profile_mode:
   fields:
     mode:
       name: Mode
-      description: "The profile: Day, Night"
+      description: "The profile: General, Day, Night"
       example: "Day"
       selector:
         select:
           options:
+            - "General"
             - "Day"
             - "Night"
 

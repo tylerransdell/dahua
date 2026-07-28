@@ -121,6 +121,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         self._profile_mode = "0"
         self._preset_position = "0"
         self._supports_profile_mode = False
+        self._supports_video_in_mode_config_ex = False
         self._channel = channel
         self._address = address
         self._max_streams = 3  # 1 main stream + 2 sub-streams by default
@@ -363,6 +364,8 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug("Cam does not support profile mode. Will use mode 0")
                         self._supports_profile_mode = False
                     _LOGGER.debug("Device supports profile mode=%s", self._supports_profile_mode)
+                    # Check for v5 API (ConfigEx)
+                    await self.async_detect_video_in_mode_api()
                 else:
                     # Start the event listeners for doorbells (VTO)
                     await self.async_start_vto_event_listener()
@@ -800,6 +803,27 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
     def get_profile_mode(self) -> str:
         # profile_mode 0=day, 1=night, 2=scene
         return self._profile_mode
+
+    async def async_detect_video_in_mode_api(self):
+        """Detect whether the camera uses v4 or v5 VideoInMode API"""
+        try:
+            conf = await self.client.async_get_video_in_mode()
+            self._supports_video_in_mode_config_ex = "table.VideoInMode[0].ConfigEx" in str(conf)
+            if self._supports_video_in_mode_config_ex:
+                _LOGGER.debug("Camera uses v5 VideoInMode API (ConfigEx)")
+            else:
+                _LOGGER.debug("Camera uses v4 VideoInMode API (Config[0])")
+        except Exception:
+            self._supports_video_in_mode_config_ex = False
+
+    def supports_profile_mode(self) -> bool:
+        """Returns True if the camera supports profile mode switching"""
+        return self._supports_profile_mode
+
+    def supports_config_ex(self) -> bool:
+        """Returns True if the camera uses v5 firmware VideoInMode API with ConfigEx"""
+        return self._supports_video_in_mode_config_ex
+
 
     def get_channel(self) -> int:
         """returns the channel index of this camera. 0 based. Channel index 0 is channel number 1"""
