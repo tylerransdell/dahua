@@ -1,9 +1,24 @@
-# Home Assistant Dahua Integration
+# Home Assistant Dahua Integration — Combo Branch
+This is the **combo** branch — a working integration branch that combines multiple feature branches from [@tylerransdell](https://github.com/tylerransdell/dahua) on top of [rroller/dahua:main](https://github.com/rroller/dahua). It bundles together several independently-developed features into one cohesive integration for testing and personal use. This branch is **not** intended for PRs — it's a personal sandbox combining the best work across projects.
+
 The `Dahua` [Home Assistant](https://www.home-assistant.io) integration allows you to integrate your [Dahua](https://www.dahuasecurity.com/) cameras, doorbells, NVRs, DVRs in Home Assistant. It's also confirmed to work with some Lorex cameras and Amcrest devices.
 
 Supports motion events, alarm events (and others), enabling/disabling motion detection, switches for infrared, illuminator (white light), security lights (red/blue flashers), sirens, doorbell button press events, and more.
 
 Also exposes several services to enable/disable motion detection or set the text overlay on the video.
+
+## Combo Branch Features
+This branch bundles all of the author's working Dahua integration projects:
+
+### 🎬 Profile Mode & v5 VideoInMode API Support
+- **New DahuaProfileModeSelect entity** — a dropdown (select) entity that lets you switch between **General**, **Day**, and **Night** video profile modes directly from the HA UI.
+- **v5 Firmware Support** — auto-detects whether your camera uses the v4 (`Config[0]`) or v5 (`ConfigEx`) VideoInMode API and handles both transparently.
+- Detection runs automatically during camera setup — no manual configuration required.
+
+### 💡 Varifocal Dual-Light Support (ZoomPrio)
+- **ZoomPrio Illuminator Mode** — For cameras with dual **NearLight** / **FarLight** white-light illuminators (common on varifocal/zoom lens cameras), adds a ZoomPrio mode option. When enabled, the appropriate illuminator (near or far) is automatically selected based on the camera's current zoom position.
+- **Independent NearLight / FarLight Brightness Control** — Full brightness sliders for each light channel, with the coordinator intelligently detecting which light types your camera supports (NearLight, FarLight, MiddleLight, or all three).
+- Gracefully falls back to single MiddleLight control for standard cameras.
 
 **NOTE**: Using the switch to turn on/off the infrared light will disable the "auto" mode. Use the service to enable auto mode again (or the camera UI).
 
@@ -276,7 +291,16 @@ Light |  Description |
 :------------ | :------------ |
 Infrared | Turns on/off the infrared light. Using this switch will disable the "auto" mode. If you want to enable auto mode again then use the service to enable auto. When in auto, this switch will not report the on/off state.
 Illuminator | If the camera has one, turns on/off the illuminator light (white light). Using this switch will disable the "auto" mode. If you want to enable auto mode again then use the service to enable auto. When in auto, this switch will not report the on/off state.
+Illuminator Brightness (MiddleLight) | Standard brightness control for the main white light illuminator (MiddleLight). Range 1–100.
+Illuminator Brightness (NearLight) | *Combo feature* — Independent brightness control for the near illuminator on dual-light (varifocal) cameras. Detected automatically; falls back to MiddleLight if not present.
+Illuminator Brightness (FarLight) | *Combo feature* — Independent brightness control for the far illuminator on dual-light (varifocal) cameras. Detected automatically; falls back to MiddleLight if not present.
+Illuminator Mode (ZoomPrio) | *Combo feature* — For cameras with NearLight/FarLight, a ZoomPrio mode option that automatically selects the right illuminator based on the camera's zoom position.
 Security | If the camera has one, turns on/off the security light (red/blue flashing light). This light stays on for 10 to 15 seconds before the camera auto turns it off.
+
+## Select
+Select Entity | Description |
+:------------ | :------------ |
+Profile Mode | *Combo feature* — A dropdown to switch between **General**, **Day**, and **Night** video profile modes. Auto-detects your camera's firmware API (v4 `Config[0]` or v5 `ConfigEx`) and works with both.
 
 ## Binary Sensors
 Sensor |  Description |
