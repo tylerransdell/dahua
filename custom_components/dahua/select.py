@@ -20,9 +20,12 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_devices):
     if coordinator.is_amcrest_doorbell() and coordinator.supports_security_light():
         devices.append(DahuaDoorbellLightSelect(coordinator, entry))
 
-    #if coordinator._supports_ptz_position:
     devices.append(DahuaCameraPresetPositionSelect(coordinator, entry))
-    
+
+    # Add profile mode select for cameras that support it
+    if coordinator.supports_profile_mode() and not coordinator.is_doorbell():
+        devices.append(DahuaProfileModeSelect(coordinator, entry))
+
     async_add_devices(devices)
 
 
@@ -85,6 +88,41 @@ class DahuaCameraPresetPositionSelect(DahuaBaseEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         channel = self._coordinator.get_channel()
         await self._coordinator.client.async_goto_preset_position(channel, int(option))
+        await self._coordinator.async_refresh()
+
+    @property
+    def name(self):
+        return self._attr_name
+
+    @property
+    def unique_id(self):
+        """ https://developers.home-assistant.io/docs/entity_registry_index/#unique-id-requirements """
+        return self._attr_unique_id
+
+
+class DahuaProfileModeSelect(DahuaBaseEntity, SelectEntity):
+    """Select entity for camera video profile mode (Day/Night/General)"""
+
+    def __init__(self, coordinator: DahuaDataUpdateCoordinator, config_entry):
+        DahuaBaseEntity.__init__(self, coordinator, config_entry)
+        SelectEntity.__init__(self)
+        self._coordinator = coordinator
+        self._attr_name = f"{coordinator.get_device_name()} Profile Mode"
+        self._attr_unique_id = f"{coordinator.get_serial_number()}_profile_mode"
+        self._attr_options = ["General", "Day", "Night"]
+
+    @property
+    def current_option(self) -> str:
+        mode = self._coordinator.get_profile_mode()
+        mapping = {"0": "Day", "1": "Night", "2": "General"}
+        return mapping.get(mode, "Day")
+
+    async def async_select_option(self, option: str) -> None:
+        channel = self._coordinator.get_channel()
+        if self._coordinator.supports_config_ex():
+            await self._coordinator.client.async_set_video_profile_mode_v5(channel, option)
+        else:
+            await self._coordinator.client.async_set_video_profile_mode(channel, option)
         await self._coordinator.async_refresh()
 
     @property

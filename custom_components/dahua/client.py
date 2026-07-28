@@ -380,17 +380,41 @@ class DahuaClient:
 
     async def async_set_video_profile_mode(self, channel: int, mode: str):
         """
-        async_set_video_profile_mode will set camera's profile mode to day or night
-        Mode should be one of: Day or Night
-        """
+        async_set_video_profile_mode will set camera's profile mode to day, night, or general
+        Mode should be one of: Day, Night, or General
 
+        Old API (v4): VideoInMode[ch].Config[0]=0|1|2
+        """
         if mode.lower() == "night":
             mode = "1"
+        elif mode.lower() == "general":
+            mode = "2"
         else:
             # Default to "day", which is 0
             mode = "0"
 
         url = "/cgi-bin/configManager.cgi?action=setConfig&VideoInMode[{0}].Config[0]={1}".format(channel, mode)
+        return await self.get(url, True)
+
+    async def async_set_video_profile_mode_v5(self, channel: int, mode: str):
+        """
+        async_set_video_profile_mode_v5 will set camera's profile mode on v5 firmware cameras.
+        Mode should be one of: General, Day, or Night
+
+        New API (v5): Uses Mode (top-level manager) + ConfigEx (profile selector):
+          General: Mode=0 & Config[0]=2
+          Day:     Mode=4 & ConfigEx=Day
+          Night:   Mode=4 & ConfigEx=Night
+        """
+        if mode.lower() == "general":
+            url = "/cgi-bin/configManager.cgi?action=setConfig&VideoInMode[{0}].Mode=0&VideoInMode[{0}].Config[0]=2".format(channel, channel)
+        elif mode.lower() == "day":
+            url = "/cgi-bin/configManager.cgi?action=setConfig&VideoInMode[{0}].Mode=4&VideoInMode[{0}].ConfigEx=Day".format(channel, channel)
+        elif mode.lower() == "night":
+            url = "/cgi-bin/configManager.cgi?action=setConfig&VideoInMode[{0}].Mode=4&VideoInMode[{0}].ConfigEx=Night".format(channel, channel)
+        else:
+            # Default to Day
+            url = "/cgi-bin/configManager.cgi?action=setConfig&VideoInMode[{0}].Mode=4&VideoInMode[{0}].ConfigEx=Day".format(channel, channel)
         return await self.get(url, True)
 
     async def async_adjustfocus_v1(self, focus: str, zoom: str):
